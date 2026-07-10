@@ -1,0 +1,42 @@
+name: Linux Rust
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  linux-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libxext-dev libwayland-dev pkg-config
+
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path linux/open-controller-linux/Cargo.toml -- --check
+
+      - name: Lint Rust
+        run: cargo clippy --manifest-path linux/open-controller-linux/Cargo.toml -- -D warnings
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path linux/open-controller-linux/Cargo.toml
+
+      - name: Build Rust release binary
+        run: cargo build --release --manifest-path linux/open-controller-linux/Cargo.toml
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build TypeScript plugin
+        run: npm run build
