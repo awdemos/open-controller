@@ -1,5 +1,8 @@
 use clap::{Parser, ValueEnum};
 use rmcp::transport::stdio;
+use rmcp::transport::streamable_http_server::{
+    session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
+};
 use rmcp::ServiceExt;
 
 use open_controller_linux::mcp::ControllerServer;
@@ -40,25 +43,34 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let cli = Cli::parse();
-    let Command::Serve { transport, port: _, confirm_destructive, shell_allowlist } = cli.command;
+    let Command::Serve {
+        transport,
+        port,
+        confirm_destructive,
+        shell_allowlist,
+    } = cli.command;
 
-    let allowlist: Result<Vec<_>, _> = shell_allowlist
-        .iter()
-        .map(|p| regex::Regex::new(p))
-        .collect();
+    let allowlist: Result<Vec<_>, _> = shell_allowlist.iter().map(|p| regex::Regex::new(p)).collect();
     let allowlist = allowlist?;
 
     let state = AppState::new(confirm_destructive, allowlist);
-    let (service, _router) = ControllerServer::new(state);
 
     match transport {
         Transport::Stdio => {
+            let (service, _router) = ControllerServer::new(state);
             let (stdin, stdout) = stdio();
             let running = service.serve((stdin, stdout)).await?;
             running.waiting().await?;
         }
         Transport::Sse => {
-            anyhow::bail!("SSE transport is not yet implemented");
+            let service = StreamableHttpService::new(
+                move || Ok(ControllerServer { state: state.clone() }),
+                LocalSessionManager::default().into(),
+                StreamableHttpServerConfig::default(),
+            );
+            let app = axum::Router::new().route_service("/mcp", service);
+            let listener = tokio::net::TcpListener::bind(("0.0.0.0", port)).await?;
+            axum::serve(listener, app).await?;
         }
     }
 
