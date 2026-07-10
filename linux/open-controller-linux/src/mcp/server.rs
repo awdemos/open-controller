@@ -6,6 +6,7 @@ use rmcp::{tool, tool_handler, tool_router};
 use serde::Deserialize;
 
 use crate::state::AppState;
+use crate::tools::shell::{run_shell, ShellArgs};
 
 #[derive(Clone, Default)]
 pub struct ControllerServer {
@@ -22,6 +23,14 @@ impl ControllerServer {
     #[tool(name = "echo", description = "Echo a message back to the caller")]
     async fn echo(&self, Parameters(args): Parameters<EchoArgs>) -> String {
         args.message
+    }
+
+    #[tool(name = "shell", description = "Execute an allowed shell command")]
+    async fn shell(&self, Parameters(args): Parameters<ShellArgs>) -> String {
+        match run_shell(&args.command, args.timeout, &self.state).await {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
     }
 }
 

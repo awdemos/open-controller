@@ -1,1 +1,1 @@
-// MCP tool modules live here.
+pub mod shell;
