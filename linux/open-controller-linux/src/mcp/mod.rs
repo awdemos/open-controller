@@ -1,1 +1,3 @@
-// MCP server modules live here.
+pub mod server;
+
+pub use server::ControllerServer;
