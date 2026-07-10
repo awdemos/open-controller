@@ -20,9 +20,22 @@ pub fn detect() -> Compositor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn restore_env(key: &str, prev: Option<String>) {
+        unsafe {
+            match prev {
+                Some(v) => env::set_var(key, v),
+                None => env::remove_var(key),
+            }
+        }
+    }
 
     #[test]
     fn detects_wayland_when_wayland_display_set() {
+        let _g = ENV_LOCK.lock().unwrap();
         let prev = env::var("WAYLAND_DISPLAY").ok();
         let prev_display = env::var("DISPLAY").ok();
         unsafe {
@@ -30,20 +43,13 @@ mod tests {
             env::remove_var("DISPLAY");
         }
         assert_eq!(detect(), Compositor::Wayland);
-        unsafe {
-            match prev {
-                Some(v) => env::set_var("WAYLAND_DISPLAY", v),
-                None => env::remove_var("WAYLAND_DISPLAY"),
-            }
-            match prev_display {
-                Some(v) => env::set_var("DISPLAY", v),
-                None => {}
-            }
-        }
+        restore_env("WAYLAND_DISPLAY", prev);
+        restore_env("DISPLAY", prev_display);
     }
 
     #[test]
     fn detects_x11_when_display_set() {
+        let _g = ENV_LOCK.lock().unwrap();
         let prev = env::var("DISPLAY").ok();
         let prev_wayland = env::var("WAYLAND_DISPLAY").ok();
         unsafe {
@@ -51,20 +57,13 @@ mod tests {
             env::set_var("DISPLAY", ":0");
         }
         assert_eq!(detect(), Compositor::X11);
-        unsafe {
-            match prev {
-                Some(v) => env::set_var("DISPLAY", v),
-                None => env::remove_var("DISPLAY"),
-            }
-            match prev_wayland {
-                Some(v) => env::set_var("WAYLAND_DISPLAY", v),
-                None => {}
-            }
-        }
+        restore_env("DISPLAY", prev);
+        restore_env("WAYLAND_DISPLAY", prev_wayland);
     }
 
     #[test]
     fn detects_headless_when_nothing_set() {
+        let _g = ENV_LOCK.lock().unwrap();
         let prev = env::var("DISPLAY").ok();
         let prev_wayland = env::var("WAYLAND_DISPLAY").ok();
         unsafe {
@@ -72,15 +71,7 @@ mod tests {
             env::remove_var("WAYLAND_DISPLAY");
         }
         assert_eq!(detect(), Compositor::Headless);
-        unsafe {
-            match prev {
-                Some(v) => env::set_var("DISPLAY", v),
-                None => {}
-            }
-            match prev_wayland {
-                Some(v) => env::set_var("WAYLAND_DISPLAY", v),
-                None => {}
-            }
-        }
+        restore_env("DISPLAY", prev);
+        restore_env("WAYLAND_DISPLAY", prev_wayland);
     }
 }
