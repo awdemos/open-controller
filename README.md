@@ -1,14 +1,16 @@
 # OpenCode PC Controller Plugin
 
-Control your Windows PC directly from OpenCode. Uses the [windows-mcp](https://github.com/CursorTouch/Windows-MCP) MCP server under the hood.
+Control your Windows or Linux PC directly from OpenCode.
+- **Windows:** Uses the [windows-mcp](https://github.com/CursorTouch/Windows-MCP) MCP server.
+- **Linux:** Uses a native Rust MCP server (`open-controller-linux`) included in this package.
 
 ## Features
 
 - **Desktop UI Automation** — click, type, scroll, drag, switch apps, resize windows
 - **File System** — read, write, copy, move, delete files and directories
-- **PowerShell** — execute any PowerShell commands
+- **PowerShell / Shell** — execute PowerShell commands on Windows or shell commands on Linux
 - **Screenshots** — capture and analyze desktop screenshots
-- **Registry** — read, write, delete registry keys
+- **Registry** — read, write, delete registry keys (Windows only; not available on Linux)
 - **Process** — list and kill running processes
 - **Clipboard** — get and set clipboard content
 - **Notifications** — send Windows toast notifications
@@ -23,6 +25,26 @@ Control your Windows PC directly from OpenCode. Uses the [windows-mcp](https://g
 - Python 3.11+
 
 ## Installation
+
+### Linux
+
+On Linux the plugin uses the bundled Rust MCP server. Build it before running OpenCode:
+
+```bash
+# Install system build dependencies (X11 / Wayland headers)
+./scripts/install-deps.sh
+
+# Build the Rust MCP server
+cargo build --release --manifest-path linux/open-controller-linux/Cargo.toml
+
+# Install npm dependencies and build the plugin
+npm install
+npm run build
+```
+
+The Rust server is then registered automatically when the plugin loads on a Linux host.
+
+### Windows
 
 ### 1. Install the npm plugin
 
@@ -69,7 +91,24 @@ Try these commands:
 
 ## MCP Tools
 
-The plugin registers 19 MCP tools via the `windows-mcp` server:
+The plugin registers MCP tools via `windows-mcp` on Windows or `open-controller-linux` on Linux:
+
+| Tool | Windows | Linux | Notes |
+|---|---|---|---|
+| App | ✅ | ⚠️ | Linux `switch`/`resize` require X11 |
+| Shortcut | ✅ | ⚠️ | Linux X11 via `enigo`; Wayland limited |
+| Snapshot | ✅ | ⚠️ | Linux returns X11 window tree + screenshot |
+| Screenshot | ✅ | ✅ | Linux X11 via `x11rb`; Wayland via portal |
+| Click / Type / Scroll / Move | ✅ | ⚠️ | Linux X11 via `enigo`; Wayland limited |
+| Wait / WaitFor | ✅ | ⚠️ | Linux WaitFor limited to process/window/clipboard |
+| FileSystem | ✅ | ✅ | 8 modes on both platforms |
+| PowerShell / Shell | ✅ | ✅ | Linux uses `/bin/sh` with allowlist |
+| Clipboard | ✅ | ✅ | Cross-platform via `arboard` |
+| Process | ✅ | ✅ | Linux kill restricted to current UID |
+| Registry | ✅ | ❌ | Windows only |
+| Notification | ✅ | ✅ | Linux via D-Bus |
+| Scrape | ✅ | ✅ | `reqwest` + `scraper` |
+| MultiSelect / MultiEdit | ✅ | ⚠️ | Linux coordinate-based on X11 |
 
 ### App Control
 - **App** — launch, switch, or resize application windows
@@ -121,9 +160,11 @@ Two extra tools are registered directly on the plugin:
 
 ## Architecture
 
+### Windows
+
 ```
 OpenCode
-  └── open-controller plugin (open-controller@1.0.1)
+  └── open-controller plugin
        ├── pc-exec tool (PowerShell)
        ├── pc-screenshot tool (base64 PNG)
        └── MCP Server: windows-mcp (Python)
@@ -135,11 +176,27 @@ OpenCode
             └── Shortcut, WaitFor
 ```
 
+### Linux
+
+```
+OpenCode
+  └── open-controller plugin
+       └── MCP Server: open-controller-linux (Rust)
+            ├── shell (bash with allowlist)
+            ├── file_system, process, clipboard
+            ├── screenshot, snapshot
+            ├── click, type, scroll, move, shortcut
+            ├── app, wait, wait_for
+            ├── notification, scrape
+            ├── multi_select, multi_edit
+            └── echo
+```
+
 The plugin:
 1. Loads on OpenCode startup
-2. Pre-warms the Python MCP server (imports `comtypes.client` for faster first call)
-3. Registers the MCP server config in OpenCode
-4. Adds `pc-exec` and `pc-screenshot` as native plugin tools
+2. Detects the host OS
+3. Registers the correct MCP server config in OpenCode
+4. On Windows, adds `pc-exec` and `pc-screenshot` as native plugin tools
 
 ## Development
 
