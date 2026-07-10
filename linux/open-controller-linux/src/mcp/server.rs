@@ -6,6 +6,7 @@ use rmcp::{tool, tool_handler, tool_router};
 use serde::Deserialize;
 
 use crate::state::AppState;
+use crate::tools::app::{run_app, AppArgs};
 use crate::tools::click::{run_click, ClickArgs};
 use crate::tools::clipboard::{run_clipboard, ClipboardArgs};
 use crate::tools::file_system::{run_file_system, FileSystemArgs};
@@ -69,6 +70,14 @@ impl ControllerServer {
     #[tool(name = "screenshot", description = "Capture a screenshot of the primary display")]
     async fn screenshot(&self, Parameters(args): Parameters<ScreenshotArgs>) -> String {
         match run_screenshot(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "app", description = "Launch, focus, or close an application window")]
+    async fn app(&self, Parameters(args): Parameters<AppArgs>) -> String {
+        match run_app(&args).await {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }

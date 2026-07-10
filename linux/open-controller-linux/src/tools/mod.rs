@@ -1,3 +1,4 @@
+pub mod app;
 pub mod click;
 pub mod clipboard;
 pub mod file_system;
