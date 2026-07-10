@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 use crate::state::AppState;
 use crate::tools::file_system::{run_file_system, FileSystemArgs};
+use crate::tools::process::{run_process, ProcessArgs};
 use crate::tools::shell::{run_shell, ShellArgs};
 
 #[derive(Clone, Default)]
@@ -37,6 +38,14 @@ impl ControllerServer {
     #[tool(name = "file_system", description = "Read, write, copy, move, delete, list, search, or get info on files")]
     async fn file_system(&self, Parameters(args): Parameters<FileSystemArgs>) -> String {
         match run_file_system(&args, self.state.confirm_destructive) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "process", description = "List or kill processes owned by the current user")]
+    async fn process(&self, Parameters(args): Parameters<ProcessArgs>) -> String {
+        match run_process(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }

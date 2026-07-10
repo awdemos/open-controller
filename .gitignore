@@ -3,3 +3,5 @@ dist/
 *.map
 .DS_Store
 *.log
+.omo/
+linux/open-controller-linux/target/
