@@ -1,4 +1,4 @@
-use crate::linux::detect::{detect, Compositor};
+use crate::linux::detect::{Compositor, detect};
 use image::ImageBuffer;
 use std::io::Cursor;
 use x11rb::connection::Connection;
@@ -17,7 +17,9 @@ pub fn capture() -> anyhow::Result<ScreenshotImage> {
         Compositor::Wayland => anyhow::bail!(
             "native Wayland screenshot requires a running desktop portal; run under XWayland or use an X11 session"
         ),
-        Compositor::Headless => anyhow::bail!("no display detected; screenshot requires X11 or Wayland"),
+        Compositor::Headless => {
+            anyhow::bail!("no display detected; screenshot requires X11 or Wayland")
+        }
     }
 }
 
@@ -41,7 +43,12 @@ fn capture_x11() -> anyhow::Result<ScreenshotImage> {
     })
 }
 
-fn encode_png_from_zpixmap(width: u32, height: u32, depth: u8, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+fn encode_png_from_zpixmap(
+    width: u32,
+    height: u32,
+    depth: u8,
+    data: &[u8],
+) -> anyhow::Result<Vec<u8>> {
     if depth != 24 && depth != 32 {
         anyhow::bail!("unsupported X11 image depth: {} (expected 24 or 32)", depth);
     }
@@ -64,8 +71,6 @@ fn encode_png_from_zpixmap(width: u32, height: u32, depth: u8, data: &[u8]) -> a
     }
 
     let mut out = Vec::new();
-    img.write_to(&mut Cursor::new(&mut out),
-        image::ImageFormat::Png,
-    )?;
+    img.write_to(&mut Cursor::new(&mut out), image::ImageFormat::Png)?;
     Ok(out)
 }

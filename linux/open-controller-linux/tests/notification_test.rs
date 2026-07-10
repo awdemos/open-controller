@@ -1,4 +1,4 @@
-use open_controller_linux::tools::notification::{run_notification, NotificationArgs};
+use open_controller_linux::tools::notification::{NotificationArgs, run_notification};
 
 #[test]
 fn notification_does_not_panic() {

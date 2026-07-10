@@ -1,6 +1,6 @@
-use open_controller_linux::linux::detect::{detect, Compositor};
-use open_controller_linux::tools::multi_edit::{run_multi_edit, MultiEditArgs, MultiEditLoc};
-use open_controller_linux::tools::multi_select::{run_multi_select, MultiSelectArgs};
+use open_controller_linux::linux::detect::{Compositor, detect};
+use open_controller_linux::tools::multi_edit::{MultiEditArgs, MultiEditLoc, run_multi_edit};
+use open_controller_linux::tools::multi_select::{MultiSelectArgs, run_multi_select};
 
 fn skip_if_headless() -> bool {
     detect() == Compositor::Headless

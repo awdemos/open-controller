@@ -1,4 +1,4 @@
-use open_controller_linux::tools::wait_for::{run_wait_for, WaitForArgs, WaitForTarget};
+use open_controller_linux::tools::wait_for::{WaitForArgs, WaitForTarget, run_wait_for};
 use std::time::{Duration, Instant};
 
 fn make_args(target: WaitForTarget, value: &str, timeout: u32) -> WaitForArgs {

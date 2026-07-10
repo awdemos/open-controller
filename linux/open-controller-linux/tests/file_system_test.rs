@@ -1,4 +1,4 @@
-use open_controller_linux::tools::file_system::{run_file_system, FileSystemArgs, FileSystemMode};
+use open_controller_linux::tools::file_system::{FileSystemArgs, FileSystemMode, run_file_system};
 use tempfile::TempDir;
 
 fn make_args(mode: FileSystemMode, path: String) -> FileSystemArgs {
@@ -64,11 +64,17 @@ fn list_and_info_directory() {
     std::fs::write(dir.path().join("a.txt"), "a").unwrap();
     std::fs::create_dir(dir.path().join("sub")).unwrap();
 
-    let list_args = make_args(FileSystemMode::List, dir.path().to_string_lossy().to_string());
+    let list_args = make_args(
+        FileSystemMode::List,
+        dir.path().to_string_lossy().to_string(),
+    );
     let out = run_file_system(&list_args, false).unwrap();
     assert!(out.contains("a.txt"));
 
-    let info_args = make_args(FileSystemMode::Info, dir.path().join("a.txt").to_string_lossy().to_string());
+    let info_args = make_args(
+        FileSystemMode::Info,
+        dir.path().join("a.txt").to_string_lossy().to_string(),
+    );
     let out = run_file_system(&info_args, false).unwrap();
     assert!(out.contains("bytes"));
 }

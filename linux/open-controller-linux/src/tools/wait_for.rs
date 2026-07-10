@@ -1,10 +1,10 @@
 use rmcp::schemars;
 use serde::Deserialize;
 use std::time::{Duration, Instant};
-use sysinfo::{get_current_pid, ProcessRefreshKind, ProcessesToUpdate, System};
+use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System, get_current_pid};
 
 use crate::linux::window;
-use crate::tools::clipboard::{run_clipboard, ClipboardArgs, ClipboardMode};
+use crate::tools::clipboard::{ClipboardArgs, ClipboardMode, run_clipboard};
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "lowercase")]
@@ -58,7 +58,12 @@ fn process_exists(value: &str) -> anyhow::Result<bool> {
     }
     let lowered = value.to_lowercase();
     for process in sys.processes().values() {
-        if process.name().to_string_lossy().to_lowercase().contains(&lowered) {
+        if process
+            .name()
+            .to_string_lossy()
+            .to_lowercase()
+            .contains(&lowered)
+        {
             return Ok(true);
         }
     }
@@ -68,9 +73,9 @@ fn process_exists(value: &str) -> anyhow::Result<bool> {
 fn window_exists(value: &str) -> anyhow::Result<bool> {
     let lowered = value.to_lowercase();
     let windows = window::list_windows()?;
-    Ok(windows
-        .iter()
-        .any(|w| w.title.to_lowercase().contains(&lowered) || w.class.to_lowercase().contains(&lowered)))
+    Ok(windows.iter().any(|w| {
+        w.title.to_lowercase().contains(&lowered) || w.class.to_lowercase().contains(&lowered)
+    }))
 }
 
 fn clipboard_contains(value: &str) -> anyhow::Result<bool> {

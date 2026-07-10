@@ -73,5 +73,3 @@ pub async fn run_shell(
     }
     Ok(result.trim().to_string())
 }
-
-

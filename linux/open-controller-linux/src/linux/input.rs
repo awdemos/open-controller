@@ -17,12 +17,18 @@ impl InputBackend {
             Compositor::Wayland => anyhow::bail!(
                 "native Wayland input requires a desktop portal; run under XWayland or use an X11 session"
             ),
-            Compositor::Headless => anyhow::bail!("no display detected; input requires X11 or Wayland"),
+            Compositor::Headless => {
+                anyhow::bail!("no display detected; input requires X11 or Wayland")
+            }
         }
     }
 
     pub fn move_mouse(&mut self, x: i32, y: i32, relative: bool) -> anyhow::Result<()> {
-        let coord = if relative { Coordinate::Rel } else { Coordinate::Abs };
+        let coord = if relative {
+            Coordinate::Rel
+        } else {
+            Coordinate::Abs
+        };
         self.enigo.move_mouse(x, y, coord)?;
         Ok(())
     }
@@ -40,18 +46,12 @@ impl InputBackend {
         Ok(())
     }
 
-    pub fn scroll(
-        &mut self,
-        direction: i32,
-        x: i32,
-        y: i32,
-        amount: i32,
-    ) -> anyhow::Result<()> {
+    pub fn scroll(&mut self, direction: i32, x: i32, y: i32, amount: i32) -> anyhow::Result<()> {
         let (axis, sign) = match direction {
             0 => (Axis::Vertical, -1),   // up
             1 => (Axis::Vertical, 1),    // down
             2 => (Axis::Horizontal, -1), // left
-            3 => (Axis::Horizontal, 1),   // right
+            3 => (Axis::Horizontal, 1),  // right
             _ => anyhow::bail!("unsupported scroll direction {}", direction),
         };
         let amount = amount.max(1);

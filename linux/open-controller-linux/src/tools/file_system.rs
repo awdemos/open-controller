@@ -81,9 +81,15 @@ pub fn run_file_system(args: &FileSystemArgs, confirm_destructive: bool) -> anyh
 
     match args.mode {
         FileSystemMode::Read => read_file(&path, args.offset, args.limit, &args.encoding),
-        FileSystemMode::Write => write_file(&path, args.content.as_deref().unwrap_or(""), args.append),
+        FileSystemMode::Write => {
+            write_file(&path, args.content.as_deref().unwrap_or(""), args.append)
+        }
         FileSystemMode::Copy => {
-            let dest = resolve_path(args.destination.as_deref().ok_or_else(|| anyhow::anyhow!("destination required for copy"))?)?;
+            let dest = resolve_path(
+                args.destination
+                    .as_deref()
+                    .ok_or_else(|| anyhow::anyhow!("destination required for copy"))?,
+            )?;
             if dest.exists() && !args.overwrite {
                 anyhow::bail!("destination already exists; set overwrite=true to replace");
             }
@@ -94,7 +100,11 @@ pub fn run_file_system(args: &FileSystemArgs, confirm_destructive: bool) -> anyh
             Ok(format!("copied {} to {}", path.display(), dest.display()))
         }
         FileSystemMode::Move => {
-            let dest = resolve_path(args.destination.as_deref().ok_or_else(|| anyhow::anyhow!("destination required for move"))?)?;
+            let dest = resolve_path(
+                args.destination
+                    .as_deref()
+                    .ok_or_else(|| anyhow::anyhow!("destination required for move"))?,
+            )?;
             if dest.exists() && !args.overwrite {
                 anyhow::bail!("destination already exists; set overwrite=true to replace");
             }
@@ -114,12 +124,23 @@ pub fn run_file_system(args: &FileSystemArgs, confirm_destructive: bool) -> anyh
             Ok(format!("deleted {}", path.display()))
         }
         FileSystemMode::List => list_directory(&path, args.show_hidden, args.recursive, args.limit),
-        FileSystemMode::Search => search_files(&path, args.pattern.as_deref().unwrap_or(""), args.recursive, args.show_hidden, args.limit),
+        FileSystemMode::Search => search_files(
+            &path,
+            args.pattern.as_deref().unwrap_or(""),
+            args.recursive,
+            args.show_hidden,
+            args.limit,
+        ),
         FileSystemMode::Info => file_info(&path),
     }
 }
 
-fn read_file(path: &Path, offset: Option<usize>, limit: Option<usize>, encoding: &str) -> anyhow::Result<String> {
+fn read_file(
+    path: &Path,
+    offset: Option<usize>,
+    limit: Option<usize>,
+    encoding: &str,
+) -> anyhow::Result<String> {
     if !path.is_file() {
         anyhow::bail!("path is not a file: {}", path.display());
     }
@@ -128,22 +149,37 @@ fn read_file(path: &Path, offset: Option<usize>, limit: Option<usize>, encoding:
     }
     let bytes = fs::read(path)?;
     let start = offset.unwrap_or(0).min(bytes.len());
-    let end = limit.map(|l| start + l).unwrap_or(bytes.len()).min(bytes.len());
+    let end = limit
+        .map(|l| start + l)
+        .unwrap_or(bytes.len())
+        .min(bytes.len());
     let slice = &bytes[start..end];
     Ok(String::from_utf8_lossy(slice).to_string())
 }
 
 fn write_file(path: &Path, content: &str, append: bool) -> anyhow::Result<String> {
     let mut file = if append {
-        fs::OpenOptions::new().create(true).append(true).open(path)?
+        fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)?
     } else {
         fs::File::create(path)?
     };
     file.write_all(content.as_bytes())?;
-    Ok(format!("wrote {} bytes to {}", content.len(), path.display()))
+    Ok(format!(
+        "wrote {} bytes to {}",
+        content.len(),
+        path.display()
+    ))
 }
 
-fn list_directory(path: &Path, show_hidden: bool, recursive: bool, limit: Option<usize>) -> anyhow::Result<String> {
+fn list_directory(
+    path: &Path,
+    show_hidden: bool,
+    recursive: bool,
+    limit: Option<usize>,
+) -> anyhow::Result<String> {
     let mut entries: Vec<String> = Vec::new();
     let walker = if recursive {
         WalkDir::new(path)
@@ -163,12 +199,23 @@ fn list_directory(path: &Path, show_hidden: bool, recursive: bool, limit: Option
         }
         let meta = entry.metadata()?;
         let kind = if meta.is_dir() { "dir" } else { "file" };
-        entries.push(format!("{} {} {}", kind, entry.path().display(), meta.len()));
+        entries.push(format!(
+            "{} {} {}",
+            kind,
+            entry.path().display(),
+            meta.len()
+        ));
     }
     Ok(entries.join("\n"))
 }
 
-fn search_files(path: &Path, pattern: &str, recursive: bool, show_hidden: bool, limit: Option<usize>) -> anyhow::Result<String> {
+fn search_files(
+    path: &Path,
+    pattern: &str,
+    recursive: bool,
+    show_hidden: bool,
+    limit: Option<usize>,
+) -> anyhow::Result<String> {
     let mut results: Vec<String> = Vec::new();
     let walker = if recursive {
         WalkDir::new(path)
@@ -196,10 +243,5 @@ fn search_files(path: &Path, pattern: &str, recursive: bool, show_hidden: bool, 
 fn file_info(path: &Path) -> anyhow::Result<String> {
     let meta = fs::metadata(path)?;
     let kind = if meta.is_dir() { "dir" } else { "file" };
-    Ok(format!(
-        "{} {} {} bytes",
-        kind,
-        path.display(),
-        meta.len()
-    ))
+    Ok(format!("{} {} {} bytes", kind, path.display(), meta.len()))
 }

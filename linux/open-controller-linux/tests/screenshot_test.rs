@@ -1,5 +1,5 @@
-use open_controller_linux::linux::detect::{detect, Compositor};
-use open_controller_linux::tools::screenshot::{run_screenshot, ScreenshotArgs};
+use open_controller_linux::linux::detect::{Compositor, detect};
+use open_controller_linux::tools::screenshot::{ScreenshotArgs, run_screenshot};
 
 fn make_args(confirm: bool) -> ScreenshotArgs {
     ScreenshotArgs {

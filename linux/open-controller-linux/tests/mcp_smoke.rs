@@ -34,11 +34,20 @@ fn read_message(
 
 async fn write_message(stdin: &mut tokio::process::ChildStdin, msg: &serde_json::Value) {
     let s = serde_json::to_string(msg).unwrap();
-    stdin.write_all(format!("{}\n", s).as_bytes()).await.unwrap();
+    stdin
+        .write_all(format!("{}\n", s).as_bytes())
+        .await
+        .unwrap();
     stdin.flush().await.unwrap();
 }
 
-async fn spawn_server(args: &[&str]) -> (tokio::process::Child, tokio::process::ChildStdin, BufReader<tokio::process::ChildStdout>) {
+async fn spawn_server(
+    args: &[&str],
+) -> (
+    tokio::process::Child,
+    tokio::process::ChildStdin,
+    BufReader<tokio::process::ChildStdout>,
+) {
     let root = workspace_root();
     let manifest = root.join("linux/open-controller-linux/Cargo.toml");
     let binary = root.join("linux/open-controller-linux/target/debug/open-controller-linux");
@@ -66,7 +75,10 @@ async fn spawn_server(args: &[&str]) -> (tokio::process::Child, tokio::process::
     (child, stdin, reader)
 }
 
-async fn send_initialize(stdin: &mut tokio::process::ChildStdin, reader: &mut BufReader<tokio::process::ChildStdout>) {
+async fn send_initialize(
+    stdin: &mut tokio::process::ChildStdin,
+    reader: &mut BufReader<tokio::process::ChildStdout>,
+) {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
 
     let init = serde_json::json!({
@@ -86,7 +98,10 @@ async fn send_initialize(stdin: &mut tokio::process::ChildStdin, reader: &mut Bu
         .expect("timeout waiting for initialize response")
         .expect("no initialize response");
     assert_eq!(init_response.get("id"), Some(&1.into()));
-    assert!(init_response.get("result").is_some(), "initialize response missing result");
+    assert!(
+        init_response.get("result").is_some(),
+        "initialize response missing result"
+    );
 
     let initialized = serde_json::json!({
         "jsonrpc": "2.0",
@@ -123,9 +138,24 @@ async fn stdio_initialize_and_list_tools() {
         .expect("tools is not an array");
 
     let expected: HashSet<&str> = [
-        "shell", "file_system", "process", "clipboard", "screenshot",
-        "shortcut", "click", "type", "scroll", "move", "app", "wait",
-        "wait_for", "snapshot", "multi_select", "multi_edit", "notification", "scrape",
+        "shell",
+        "file_system",
+        "process",
+        "clipboard",
+        "screenshot",
+        "shortcut",
+        "click",
+        "type",
+        "scroll",
+        "move",
+        "app",
+        "wait",
+        "wait_for",
+        "snapshot",
+        "multi_select",
+        "multi_edit",
+        "notification",
+        "scrape",
     ]
     .iter()
     .cloned()
@@ -133,12 +163,20 @@ async fn stdio_initialize_and_list_tools() {
 
     let names: HashSet<String> = tools
         .iter()
-        .map(|t| t.get("name").and_then(|n| n.as_str()).map(String::from).unwrap_or_default())
+        .map(|t| {
+            t.get("name")
+                .and_then(|n| n.as_str())
+                .map(String::from)
+                .unwrap_or_default()
+        })
         .collect();
     assert_eq!(names.len(), tools.len(), "duplicate tool names returned");
     assert_eq!(
         names,
-        expected.iter().map(|s| s.to_string()).collect::<HashSet<String>>(),
+        expected
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<HashSet<String>>(),
         "tool set mismatch: got {:?}",
         names
     );
@@ -156,7 +194,8 @@ async fn stdio_shell_and_file_system_smoke() {
         "stdio",
         "--shell-allowlist",
         "^echo ",
-    ]).await;
+    ])
+    .await;
     send_initialize(&mut stdin, &mut reader).await;
 
     let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
@@ -185,7 +224,11 @@ async fn stdio_shell_and_file_system_smoke() {
         .and_then(|o| o.get("text"))
         .and_then(|t| t.as_str())
         .expect("shell response missing text content");
-    assert!(content.contains("hello-mcp"), "unexpected shell output: {}", content);
+    assert!(
+        content.contains("hello-mcp"),
+        "unexpected shell output: {}",
+        content
+    );
 
     let fs_call = serde_json::json!({
         "jsonrpc": "2.0",
@@ -211,7 +254,11 @@ async fn stdio_shell_and_file_system_smoke() {
         .and_then(|o| o.get("text"))
         .and_then(|t| t.as_str())
         .expect("file_system response missing text content");
-    assert!(content.contains("open-controller-linux"), "unexpected file_system output: {}", content);
+    assert!(
+        content.contains("open-controller-linux"),
+        "unexpected file_system output: {}",
+        content
+    );
 
     let _ = child.start_kill();
 }

@@ -1,4 +1,4 @@
-use open_controller_linux::tools::process::{run_process, ProcessArgs, ProcessMode};
+use open_controller_linux::tools::process::{ProcessArgs, ProcessMode, run_process};
 use sysinfo::get_current_pid;
 
 fn make_args(mode: ProcessMode) -> ProcessArgs {

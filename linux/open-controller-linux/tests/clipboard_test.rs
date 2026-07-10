@@ -1,5 +1,5 @@
 use arboard::Clipboard;
-use open_controller_linux::tools::clipboard::{run_clipboard, ClipboardArgs, ClipboardMode};
+use open_controller_linux::tools::clipboard::{ClipboardArgs, ClipboardMode, run_clipboard};
 use std::sync::Mutex;
 
 static CLIPBOARD_LOCK: Mutex<()> = Mutex::new(());

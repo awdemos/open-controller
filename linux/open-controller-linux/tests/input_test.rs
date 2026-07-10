@@ -1,9 +1,9 @@
-use open_controller_linux::linux::detect::{detect, Compositor};
-use open_controller_linux::tools::click::{run_click, ClickArgs};
-use open_controller_linux::tools::move_::{run_move, MoveArgs};
-use open_controller_linux::tools::scroll::{run_scroll, ScrollArgs};
-use open_controller_linux::tools::shortcut::{run_shortcut, ShortcutArgs};
-use open_controller_linux::tools::type_::{run_type, TypeArgs};
+use open_controller_linux::linux::detect::{Compositor, detect};
+use open_controller_linux::tools::click::{ClickArgs, run_click};
+use open_controller_linux::tools::move_::{MoveArgs, run_move};
+use open_controller_linux::tools::scroll::{ScrollArgs, run_scroll};
+use open_controller_linux::tools::shortcut::{ShortcutArgs, run_shortcut};
+use open_controller_linux::tools::type_::{TypeArgs, run_type};
 
 fn skip_if_display() -> bool {
     detect() == Compositor::Headless

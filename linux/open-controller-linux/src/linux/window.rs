@@ -1,7 +1,7 @@
+use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{ConnectionExt, Screen, StackMode, Window};
 use x11rb::rust_connection::RustConnection;
-use x11rb::CURRENT_TIME;
 
 pub struct WindowInfo {
     pub id: u32,
@@ -52,8 +52,7 @@ fn find_window(name: &str) -> anyhow::Result<WindowInfo> {
     windows
         .into_iter()
         .find(|w| {
-            w.title.to_lowercase().contains(&lowered)
-                || w.class.to_lowercase().contains(&lowered)
+            w.title.to_lowercase().contains(&lowered) || w.class.to_lowercase().contains(&lowered)
         })
         .ok_or_else(|| anyhow::anyhow!("no window matching '{}' found", name))
 }
@@ -68,7 +67,10 @@ fn get_window_info(
         .flatten()
         .or_else(|| wm_name(conn, screen, win).ok().flatten())
         .unwrap_or_default();
-    let class = wm_class(conn, screen, win).ok().flatten().unwrap_or_default();
+    let class = wm_class(conn, screen, win)
+        .ok()
+        .flatten()
+        .unwrap_or_default();
     if title.is_empty() && class.is_empty() {
         return Ok(None);
     }
@@ -95,18 +97,12 @@ fn net_wm_name(
     Ok(Some(String::from_utf8_lossy(&reply.value).to_string()))
 }
 
-fn wm_name(
-    conn: &RustConnection,
-    _screen: &Screen,
-    win: Window,
-) -> anyhow::Result<Option<String>> {
+fn wm_name(conn: &RustConnection, _screen: &Screen, win: Window) -> anyhow::Result<Option<String>> {
     let reply = conn
         .get_property(
             false,
             win,
-            x11rb::protocol::xproto::Atom::from(
-                x11rb::protocol::xproto::AtomEnum::WM_NAME,
-            ),
+            x11rb::protocol::xproto::Atom::from(x11rb::protocol::xproto::AtomEnum::WM_NAME),
             x11rb::protocol::xproto::Atom::from(x11rb::protocol::xproto::AtomEnum::STRING),
             0,
             1024,
@@ -127,9 +123,7 @@ fn wm_class(
         .get_property(
             false,
             win,
-            x11rb::protocol::xproto::Atom::from(
-                x11rb::protocol::xproto::AtomEnum::WM_CLASS,
-            ),
+            x11rb::protocol::xproto::Atom::from(x11rb::protocol::xproto::AtomEnum::WM_CLASS),
             x11rb::protocol::xproto::Atom::from(x11rb::protocol::xproto::AtomEnum::STRING),
             0,
             1024,

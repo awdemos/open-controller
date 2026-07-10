@@ -23,12 +23,7 @@ pub fn run_scroll(args: &ScrollArgs) -> anyhow::Result<String> {
         anyhow::bail!("scroll requires confirm=true");
     }
     let mut backend = InputBackend::try_new()?;
-    backend.scroll(
-        args.direction,
-        args.x,
-        args.y,
-        args.amount.unwrap_or(3),
-    )?;
+    backend.scroll(args.direction, args.x, args.y, args.amount.unwrap_or(3))?;
     Ok(format!(
         "scrolled direction {} at {},{}",
         args.direction, args.x, args.y

@@ -26,7 +26,10 @@ pub fn run_multi_edit(args: &MultiEditArgs) -> anyhow::Result<String> {
     if !args.confirm {
         anyhow::bail!("multi_edit requires confirm=true");
     }
-    let locs = args.locs.as_deref().ok_or_else(|| anyhow::anyhow!("locs is required"))?;
+    let locs = args
+        .locs
+        .as_deref()
+        .ok_or_else(|| anyhow::anyhow!("locs is required"))?;
     if locs.is_empty() {
         anyhow::bail!("locs must not be empty");
     }
@@ -38,5 +41,9 @@ pub fn run_multi_edit(args: &MultiEditArgs) -> anyhow::Result<String> {
         backend.type_text(&loc.text)?;
         total += loc.text.len();
     }
-    Ok(format!("edited {} locations with {} characters", locs.len(), total))
+    Ok(format!(
+        "edited {} locations with {} characters",
+        locs.len(),
+        total
+    ))
 }

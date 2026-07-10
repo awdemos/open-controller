@@ -1,5 +1,5 @@
-use open_controller_linux::linux::detect::{detect, Compositor};
-use open_controller_linux::tools::snapshot::{run_snapshot, SnapshotArgs};
+use open_controller_linux::linux::detect::{Compositor, detect};
+use open_controller_linux::tools::snapshot::{SnapshotArgs, run_snapshot};
 
 #[test]
 fn snapshot_requires_confirm() {

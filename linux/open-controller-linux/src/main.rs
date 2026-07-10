@@ -1,9 +1,9 @@
 use clap::{Parser, ValueEnum};
+use rmcp::ServiceExt;
 use rmcp::transport::stdio;
 use rmcp::transport::streamable_http_server::{
-    session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
+    StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
 };
-use rmcp::ServiceExt;
 
 use open_controller_linux::mcp::ControllerServer;
 use open_controller_linux::state::AppState;
@@ -50,7 +50,10 @@ async fn main() -> anyhow::Result<()> {
         shell_allowlist,
     } = cli.command;
 
-    let allowlist: Result<Vec<_>, _> = shell_allowlist.iter().map(|p| regex::Regex::new(p)).collect();
+    let allowlist: Result<Vec<_>, _> = shell_allowlist
+        .iter()
+        .map(|p| regex::Regex::new(p))
+        .collect();
     let allowlist = allowlist?;
 
     let state = AppState::new(confirm_destructive, allowlist);
@@ -64,7 +67,11 @@ async fn main() -> anyhow::Result<()> {
         }
         Transport::Sse => {
             let service = StreamableHttpService::new(
-                move || Ok(ControllerServer { state: state.clone() }),
+                move || {
+                    Ok(ControllerServer {
+                        state: state.clone(),
+                    })
+                },
                 LocalSessionManager::default().into(),
                 StreamableHttpServerConfig::default(),
             );

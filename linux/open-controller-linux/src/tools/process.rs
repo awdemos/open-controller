@@ -1,6 +1,6 @@
 use rmcp::schemars;
 use serde::Deserialize;
-use sysinfo::{get_current_pid, Pid, ProcessRefreshKind, ProcessesToUpdate, Signal, System};
+use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, Signal, System, get_current_pid};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "lowercase")]
@@ -79,7 +79,10 @@ fn list_processes(sys: &System, args: &ProcessArgs) -> anyhow::Result<String> {
         if !name_filter.is_empty() && !proc_name.to_lowercase().contains(&name_filter) {
             continue;
         }
-        let uid = process.user_id().map(|u| u.to_string()).unwrap_or_else(|| "?".to_string());
+        let uid = process
+            .user_id()
+            .map(|u| u.to_string())
+            .unwrap_or_else(|| "?".to_string());
         if let Some(filter) = user_filter
             && uid != filter
         {
@@ -104,8 +107,8 @@ fn kill_process(sys: &mut System, args: &ProcessArgs) -> anyhow::Result<String> 
         .ok_or_else(|| anyhow::anyhow!("process_id is required for kill mode"))?;
     let pid = Pid::from_u32(pid_value);
 
-    let current_pid = get_current_pid()
-        .map_err(|_| anyhow::anyhow!("unable to determine current process"))?;
+    let current_pid =
+        get_current_pid().map_err(|_| anyhow::anyhow!("unable to determine current process"))?;
     if is_protected_pid(pid) || pid == current_pid {
         anyhow::bail!("cannot kill protected or current process {}", pid_value);
     }
@@ -116,7 +119,8 @@ fn kill_process(sys: &mut System, args: &ProcessArgs) -> anyhow::Result<String> 
         ProcessRefreshKind::everything(),
     );
 
-    let current_uid = current_uid(sys).ok_or_else(|| anyhow::anyhow!("unable to determine current user"))?;
+    let current_uid =
+        current_uid(sys).ok_or_else(|| anyhow::anyhow!("unable to determine current user"))?;
     let process = sys
         .process(pid)
         .ok_or_else(|| anyhow::anyhow!("process {} not found", pid_value))?;
@@ -141,6 +145,10 @@ fn kill_process(sys: &mut System, args: &ProcessArgs) -> anyhow::Result<String> 
     match process.kill_with(signal) {
         Some(true) => Ok(format!("sent {:?} to process {}", signal, pid_value)),
         Some(false) => anyhow::bail!("failed to send {:?} to process {}", signal, pid_value),
-        None => anyhow::bail!("sending {:?} to process {} is not supported", signal, pid_value),
+        None => anyhow::bail!(
+            "sending {:?} to process {} is not supported",
+            signal,
+            pid_value
+        ),
     }
 }

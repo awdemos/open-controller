@@ -1,4 +1,4 @@
-use open_controller_linux::tools::app::{run_app, AppArgs};
+use open_controller_linux::tools::app::{AppArgs, run_app};
 use std::path::PathBuf;
 
 fn make_args(name: &str, launch: bool, focus: bool, close: bool, confirm: bool) -> AppArgs {

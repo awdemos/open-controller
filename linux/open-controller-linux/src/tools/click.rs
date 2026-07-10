@@ -22,5 +22,8 @@ pub fn run_click(args: &ClickArgs) -> anyhow::Result<String> {
     }
     let mut backend = InputBackend::try_new()?;
     backend.click(args.button, args.x, args.y)?;
-    Ok(format!("clicked button {} at {},{}", args.button, args.x, args.y))
+    Ok(format!(
+        "clicked button {} at {},{}",
+        args.button, args.x, args.y
+    ))
 }

@@ -1,4 +1,4 @@
-use open_controller_linux::tools::scrape::{run_scrape, ScrapeArgs};
+use open_controller_linux::tools::scrape::{ScrapeArgs, run_scrape};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
