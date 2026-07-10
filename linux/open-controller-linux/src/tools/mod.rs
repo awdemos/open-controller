@@ -1,4 +1,5 @@
 pub mod clipboard;
 pub mod file_system;
 pub mod process;
+pub mod screenshot;
 pub mod shell;

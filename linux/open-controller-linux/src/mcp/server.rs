@@ -9,6 +9,7 @@ use crate::state::AppState;
 use crate::tools::clipboard::{run_clipboard, ClipboardArgs};
 use crate::tools::file_system::{run_file_system, FileSystemArgs};
 use crate::tools::process::{run_process, ProcessArgs};
+use crate::tools::screenshot::{run_screenshot, ScreenshotArgs};
 use crate::tools::shell::{run_shell, ShellArgs};
 
 #[derive(Clone, Default)]
@@ -55,6 +56,14 @@ impl ControllerServer {
     #[tool(name = "process", description = "List or kill processes owned by the current user")]
     async fn process(&self, Parameters(args): Parameters<ProcessArgs>) -> String {
         match run_process(&args, self.state.confirm_destructive) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "screenshot", description = "Capture a screenshot of the primary display")]
+    async fn screenshot(&self, Parameters(args): Parameters<ScreenshotArgs>) -> String {
+        match run_screenshot(&args) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
