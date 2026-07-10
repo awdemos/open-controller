@@ -6,6 +6,7 @@ use rmcp::{tool, tool_handler, tool_router};
 use serde::Deserialize;
 
 use crate::state::AppState;
+use crate::tools::file_system::{run_file_system, FileSystemArgs};
 use crate::tools::shell::{run_shell, ShellArgs};
 
 #[derive(Clone, Default)]
@@ -28,6 +29,14 @@ impl ControllerServer {
     #[tool(name = "shell", description = "Execute an allowed shell command")]
     async fn shell(&self, Parameters(args): Parameters<ShellArgs>) -> String {
         match run_shell(&args.command, args.timeout, &self.state).await {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "file_system", description = "Read, write, copy, move, delete, list, search, or get info on files")]
+    async fn file_system(&self, Parameters(args): Parameters<FileSystemArgs>) -> String {
+        match run_file_system(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
