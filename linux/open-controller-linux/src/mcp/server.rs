@@ -13,7 +13,9 @@ use crate::tools::file_system::{run_file_system, FileSystemArgs};
 use crate::tools::move_::{run_move, MoveArgs};
 use crate::tools::multi_edit::{run_multi_edit, MultiEditArgs};
 use crate::tools::multi_select::{run_multi_select, MultiSelectArgs};
+use crate::tools::notification::{run_notification, NotificationArgs};
 use crate::tools::process::{run_process, ProcessArgs};
+use crate::tools::scrape::{run_scrape, ScrapeArgs};
 use crate::tools::screenshot::{run_screenshot, ScreenshotArgs};
 use crate::tools::scroll::{run_scroll, ScrollArgs};
 use crate::tools::shell::{run_shell, ShellArgs};
@@ -64,9 +66,25 @@ impl ControllerServer {
         }
     }
 
+    #[tool(name = "notification", description = "Send a desktop notification")]
+    async fn notification(&self, Parameters(args): Parameters<NotificationArgs>) -> String {
+        match run_notification(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
     #[tool(name = "process", description = "List or kill processes owned by the current user")]
     async fn process(&self, Parameters(args): Parameters<ProcessArgs>) -> String {
         match run_process(&args, self.state.confirm_destructive) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "scrape", description = "Fetch a URL and optionally extract text via CSS selector")]
+    async fn scrape(&self, Parameters(args): Parameters<ScrapeArgs>) -> String {
+        match run_scrape(&args).await {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
