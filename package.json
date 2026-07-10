@@ -49,8 +49,9 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "os": [
-    "win32"
+    "os": [
+    "win32",
+    "linux"
   ],
   "publishConfig": {
     "access": "public"
