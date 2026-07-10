@@ -6,6 +6,7 @@ use rmcp::{tool, tool_handler, tool_router};
 use serde::Deserialize;
 
 use crate::state::AppState;
+use crate::tools::clipboard::{run_clipboard, ClipboardArgs};
 use crate::tools::file_system::{run_file_system, FileSystemArgs};
 use crate::tools::process::{run_process, ProcessArgs};
 use crate::tools::shell::{run_shell, ShellArgs};
@@ -30,6 +31,14 @@ impl ControllerServer {
     #[tool(name = "shell", description = "Execute an allowed shell command")]
     async fn shell(&self, Parameters(args): Parameters<ShellArgs>) -> String {
         match run_shell(&args.command, args.timeout, &self.state).await {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "clipboard", description = "Read, write, or clear the system clipboard")]
+    async fn clipboard(&self, Parameters(args): Parameters<ClipboardArgs>) -> String {
+        match run_clipboard(&args) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
