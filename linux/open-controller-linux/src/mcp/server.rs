@@ -11,12 +11,17 @@ use crate::tools::click::{run_click, ClickArgs};
 use crate::tools::clipboard::{run_clipboard, ClipboardArgs};
 use crate::tools::file_system::{run_file_system, FileSystemArgs};
 use crate::tools::move_::{run_move, MoveArgs};
+use crate::tools::multi_edit::{run_multi_edit, MultiEditArgs};
+use crate::tools::multi_select::{run_multi_select, MultiSelectArgs};
 use crate::tools::process::{run_process, ProcessArgs};
 use crate::tools::screenshot::{run_screenshot, ScreenshotArgs};
 use crate::tools::scroll::{run_scroll, ScrollArgs};
 use crate::tools::shell::{run_shell, ShellArgs};
 use crate::tools::shortcut::{run_shortcut, ShortcutArgs};
+use crate::tools::snapshot::{run_snapshot, SnapshotArgs};
 use crate::tools::type_::{run_type, TypeArgs};
+use crate::tools::wait::{run_wait, WaitArgs};
+use crate::tools::wait_for::{run_wait_for, WaitForArgs};
 
 #[derive(Clone, Default)]
 pub struct ControllerServer {
@@ -118,6 +123,43 @@ impl ControllerServer {
     #[tool(name = "shortcut", description = "Press a keyboard shortcut")]
     async fn shortcut(&self, Parameters(args): Parameters<ShortcutArgs>) -> String {
         match run_shortcut(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "wait", description = "Wait for a number of seconds")]
+    async fn wait(&self, Parameters(args): Parameters<WaitArgs>) -> String {
+        run_wait(args.duration).await
+    }
+
+    #[tool(name = "wait_for", description = "Wait for a process, window, or clipboard text to appear")]
+    async fn wait_for(&self, Parameters(args): Parameters<WaitForArgs>) -> String {
+        match run_wait_for(&args).await {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "snapshot", description = "Capture a screenshot and list visible windows")]
+    async fn snapshot(&self, Parameters(args): Parameters<SnapshotArgs>) -> String {
+        match run_snapshot(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "multi_select", description = "Click multiple screen coordinates")]
+    async fn multi_select(&self, Parameters(args): Parameters<MultiSelectArgs>) -> String {
+        match run_multi_select(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "multi_edit", description = "Click and type text at multiple coordinates")]
+    async fn multi_edit(&self, Parameters(args): Parameters<MultiEditArgs>) -> String {
+        match run_multi_edit(&args) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
