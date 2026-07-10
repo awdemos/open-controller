@@ -151,10 +151,10 @@ fn list_directory(path: &Path, show_hidden: bool, recursive: bool, limit: Option
         WalkDir::new(path).max_depth(1)
     };
     for (i, entry) in walker.into_iter().enumerate() {
-        if let Some(l) = limit {
-            if i >= l {
-                break;
-            }
+        if let Some(l) = limit
+            && i >= l
+        {
+            break;
         }
         let entry = entry?;
         let name = entry.file_name().to_string_lossy();
@@ -176,10 +176,10 @@ fn search_files(path: &Path, pattern: &str, recursive: bool, show_hidden: bool, 
         WalkDir::new(path).max_depth(1)
     };
     for (i, entry) in walker.into_iter().enumerate() {
-        if let Some(l) = limit {
-            if i >= l {
-                break;
-            }
+        if let Some(l) = limit
+            && i >= l
+        {
+            break;
         }
         let entry = entry?;
         let name = entry.file_name().to_string_lossy();

@@ -1,5 +1,10 @@
+pub mod click;
 pub mod clipboard;
 pub mod file_system;
+pub mod move_;
 pub mod process;
 pub mod screenshot;
+pub mod scroll;
 pub mod shell;
+pub mod shortcut;
+pub mod type_;

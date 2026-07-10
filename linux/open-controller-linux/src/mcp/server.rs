@@ -6,11 +6,16 @@ use rmcp::{tool, tool_handler, tool_router};
 use serde::Deserialize;
 
 use crate::state::AppState;
+use crate::tools::click::{run_click, ClickArgs};
 use crate::tools::clipboard::{run_clipboard, ClipboardArgs};
 use crate::tools::file_system::{run_file_system, FileSystemArgs};
+use crate::tools::move_::{run_move, MoveArgs};
 use crate::tools::process::{run_process, ProcessArgs};
 use crate::tools::screenshot::{run_screenshot, ScreenshotArgs};
+use crate::tools::scroll::{run_scroll, ScrollArgs};
 use crate::tools::shell::{run_shell, ShellArgs};
+use crate::tools::shortcut::{run_shortcut, ShortcutArgs};
+use crate::tools::type_::{run_type, TypeArgs};
 
 #[derive(Clone, Default)]
 pub struct ControllerServer {
@@ -64,6 +69,46 @@ impl ControllerServer {
     #[tool(name = "screenshot", description = "Capture a screenshot of the primary display")]
     async fn screenshot(&self, Parameters(args): Parameters<ScreenshotArgs>) -> String {
         match run_screenshot(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "click", description = "Click a mouse button at screen coordinates")]
+    async fn click(&self, Parameters(args): Parameters<ClickArgs>) -> String {
+        match run_click(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "move", description = "Move the mouse cursor to screen coordinates")]
+    async fn r#move(&self, Parameters(args): Parameters<MoveArgs>) -> String {
+        match run_move(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "scroll", description = "Scroll the mouse wheel at screen coordinates")]
+    async fn scroll(&self, Parameters(args): Parameters<ScrollArgs>) -> String {
+        match run_scroll(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "type", description = "Type text as keyboard input")]
+    async fn r#type(&self, Parameters(args): Parameters<TypeArgs>) -> String {
+        match run_type(&args) {
+            Ok(out) => out,
+            Err(e) => format!("error: {}", e),
+        }
+    }
+
+    #[tool(name = "shortcut", description = "Press a keyboard shortcut")]
+    async fn shortcut(&self, Parameters(args): Parameters<ShortcutArgs>) -> String {
+        match run_shortcut(&args) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }

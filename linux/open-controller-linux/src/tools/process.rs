@@ -32,9 +32,7 @@ fn default_false() -> bool {
 
 fn current_uid(sys: &System) -> Option<u32> {
     let pid = get_current_pid().ok()?;
-    sys.process(pid)
-        .and_then(|p| p.user_id())
-        .map(|u| **u as u32)
+    sys.process(pid).and_then(|p| p.user_id()).map(|u| **u)
 }
 
 fn parse_signal(s: &str) -> Option<Signal> {
@@ -82,10 +80,10 @@ fn list_processes(sys: &System, args: &ProcessArgs) -> anyhow::Result<String> {
             continue;
         }
         let uid = process.user_id().map(|u| u.to_string()).unwrap_or_else(|| "?".to_string());
-        if let Some(filter) = user_filter {
-            if uid != filter {
-                continue;
-            }
+        if let Some(filter) = user_filter
+            && uid != filter
+        {
+            continue;
         }
         lines.push(format!(
             "pid={} name={} uid={} mem={}",
@@ -123,7 +121,7 @@ fn kill_process(sys: &mut System, args: &ProcessArgs) -> anyhow::Result<String> 
         .process(pid)
         .ok_or_else(|| anyhow::anyhow!("process {} not found", pid_value))?;
 
-    let proc_uid = process.user_id().map(|u| **u as u32);
+    let proc_uid = process.user_id().map(|u| **u);
     if proc_uid != Some(current_uid) {
         anyhow::bail!(
             "process {} is owned by a different user (refusing cross-user kill)",
