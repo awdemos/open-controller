@@ -1,9 +1,7 @@
 use rmcp::handler::server::tool::ToolRouter;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::handler::server::ServerHandler;
-use rmcp::schemars;
 use rmcp::{tool, tool_handler, tool_router};
-use serde::Deserialize;
 
 use crate::state::AppState;
 use crate::tools::app::{run_app, AppArgs};
@@ -30,18 +28,8 @@ pub struct ControllerServer {
     pub state: AppState,
 }
 
-#[derive(Deserialize, schemars::JsonSchema)]
-pub struct EchoArgs {
-    pub message: String,
-}
-
 #[tool_router]
 impl ControllerServer {
-    #[tool(name = "echo", description = "Echo a message back to the caller")]
-    async fn echo(&self, Parameters(args): Parameters<EchoArgs>) -> String {
-        args.message
-    }
-
     #[tool(name = "shell", description = "Execute an allowed shell command")]
     async fn shell(&self, Parameters(args): Parameters<ShellArgs>) -> String {
         match run_shell(&args.command, args.timeout, &self.state).await {

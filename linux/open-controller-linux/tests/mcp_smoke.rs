@@ -1,7 +1,19 @@
+use std::collections::HashSet;
 use std::process::Stdio;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
+
+fn workspace_root() -> std::path::PathBuf {
+    std::env::var("CARGO_MANIFEST_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf()
+}
 
 fn read_message(
     reader: &mut BufReader<tokio::process::ChildStdout>,
@@ -26,25 +38,13 @@ async fn write_message(stdin: &mut tokio::process::ChildStdin, msg: &serde_json:
     stdin.flush().await.unwrap();
 }
 
-#[tokio::test]
-async fn stdio_initialize_and_list_tools() {
-    let root = std::env::var("CARGO_MANIFEST_DIR")
-        .map(std::path::PathBuf::from)
-        .unwrap()
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf();
+async fn spawn_server(args: &[&str]) -> (tokio::process::Child, tokio::process::ChildStdin, BufReader<tokio::process::ChildStdout>) {
+    let root = workspace_root();
     let manifest = root.join("linux/open-controller-linux/Cargo.toml");
     let binary = root.join("linux/open-controller-linux/target/debug/open-controller-linux");
 
     let build = Command::new("cargo")
-        .args([
-            "build",
-            "--quiet",
-            "--manifest-path",
-        ])
+        .args(["build", "--quiet", "--manifest-path"])
         .arg(&manifest)
         .args(["--bin", "open-controller-linux"])
         .status()
@@ -53,16 +53,21 @@ async fn stdio_initialize_and_list_tools() {
     assert!(build.success(), "failed to build open-controller-linux");
 
     let mut child = Command::new(&binary)
-        .args(["serve", "--transport", "stdio"])
+        .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
 
-    let mut stdin = child.stdin.take().unwrap();
+    let stdin = child.stdin.take().unwrap();
     let stdout = child.stdout.take().unwrap();
-    let mut reader = BufReader::new(stdout);
+    let reader = BufReader::new(stdout);
+    (child, stdin, reader)
+}
+
+async fn send_initialize(stdin: &mut tokio::process::ChildStdin, reader: &mut BufReader<tokio::process::ChildStdout>) {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
 
     let init = serde_json::json!({
         "jsonrpc": "2.0",
@@ -74,10 +79,9 @@ async fn stdio_initialize_and_list_tools() {
             "clientInfo": { "name": "test", "version": "0.1.0" }
         }
     });
-    write_message(&mut stdin, &init).await;
+    write_message(stdin, &init).await;
 
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
-    let init_response = tokio::time::timeout_at(deadline, read_message(&mut reader))
+    let init_response = tokio::time::timeout_at(deadline, read_message(reader))
         .await
         .expect("timeout waiting for initialize response")
         .expect("no initialize response");
@@ -89,8 +93,15 @@ async fn stdio_initialize_and_list_tools() {
         "method": "notifications/initialized",
         "params": {}
     });
-    write_message(&mut stdin, &initialized).await;
+    write_message(stdin, &initialized).await;
+}
 
+#[tokio::test]
+async fn stdio_initialize_and_list_tools() {
+    let (mut child, mut stdin, mut reader) = spawn_server(&["serve", "--transport", "stdio"]).await;
+    send_initialize(&mut stdin, &mut reader).await;
+
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
     let list = serde_json::json!({
         "jsonrpc": "2.0",
         "id": 2,
@@ -107,8 +118,100 @@ async fn stdio_initialize_and_list_tools() {
     let tools = list_response
         .get("result")
         .and_then(|r| r.get("tools"))
-        .expect("tools/list response missing tools array");
-    assert!(tools.as_array().is_some_and(|a| !a.is_empty()), "tools array was empty");
+        .expect("tools/list response missing tools array")
+        .as_array()
+        .expect("tools is not an array");
+
+    let expected: HashSet<&str> = [
+        "shell", "file_system", "process", "clipboard", "screenshot",
+        "shortcut", "click", "type", "scroll", "move", "app", "wait",
+        "wait_for", "snapshot", "multi_select", "multi_edit", "notification", "scrape",
+    ]
+    .iter()
+    .cloned()
+    .collect();
+
+    let names: HashSet<String> = tools
+        .iter()
+        .map(|t| t.get("name").and_then(|n| n.as_str()).map(String::from).unwrap_or_default())
+        .collect();
+    assert_eq!(names.len(), tools.len(), "duplicate tool names returned");
+    assert_eq!(
+        names,
+        expected.iter().map(|s| s.to_string()).collect::<HashSet<String>>(),
+        "tool set mismatch: got {:?}",
+        names
+    );
+
+    let _ = child.start_kill();
+}
+
+#[tokio::test]
+async fn stdio_shell_and_file_system_smoke() {
+    let root = workspace_root();
+    let cargo_toml = root.join("linux/open-controller-linux/Cargo.toml");
+    let (mut child, mut stdin, mut reader) = spawn_server(&[
+        "serve",
+        "--transport",
+        "stdio",
+        "--shell-allowlist",
+        "^echo ",
+    ]).await;
+    send_initialize(&mut stdin, &mut reader).await;
+
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
+
+    let shell_call = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "tools/call",
+        "params": {
+            "name": "shell",
+            "arguments": { "command": "echo hello-mcp", "timeout": 5 }
+        }
+    });
+    write_message(&mut stdin, &shell_call).await;
+
+    let shell_response = tokio::time::timeout_at(deadline, read_message(&mut reader))
+        .await
+        .expect("timeout waiting for shell response")
+        .expect("no shell response");
+    assert_eq!(shell_response.get("id"), Some(&10.into()));
+    let content = shell_response
+        .get("result")
+        .and_then(|r| r.get("content"))
+        .and_then(|c| c.as_array())
+        .and_then(|a| a.first())
+        .and_then(|o| o.get("text"))
+        .and_then(|t| t.as_str())
+        .expect("shell response missing text content");
+    assert!(content.contains("hello-mcp"), "unexpected shell output: {}", content);
+
+    let fs_call = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "tools/call",
+        "params": {
+            "name": "file_system",
+            "arguments": { "mode": "read", "path": cargo_toml.to_string_lossy() }
+        }
+    });
+    write_message(&mut stdin, &fs_call).await;
+
+    let fs_response = tokio::time::timeout_at(deadline, read_message(&mut reader))
+        .await
+        .expect("timeout waiting for file_system response")
+        .expect("no file_system response");
+    assert_eq!(fs_response.get("id"), Some(&11.into()));
+    let content = fs_response
+        .get("result")
+        .and_then(|r| r.get("content"))
+        .and_then(|c| c.as_array())
+        .and_then(|a| a.first())
+        .and_then(|o| o.get("text"))
+        .and_then(|t| t.as_str())
+        .expect("file_system response missing text content");
+    assert!(content.contains("open-controller-linux"), "unexpected file_system output: {}", content);
 
     let _ = child.start_kill();
 }
