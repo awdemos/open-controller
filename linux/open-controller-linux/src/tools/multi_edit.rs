@@ -14,17 +14,11 @@ pub struct MultiEditLoc {
 pub struct MultiEditArgs {
     #[serde(default)]
     pub locs: Option<Vec<MultiEditLoc>>,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
-fn default_false() -> bool {
-    false
-}
-
-pub fn run_multi_edit(args: &MultiEditArgs) -> anyhow::Result<String> {
-    if !args.confirm {
-        anyhow::bail!("multi_edit requires confirm=true");
+pub fn run_multi_edit(args: &MultiEditArgs, confirm_destructive: bool) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("multi_edit requires --confirm-destructive");
     }
     let locs = args
         .locs

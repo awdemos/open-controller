@@ -15,15 +15,12 @@ pub struct ClipboardArgs {
     pub mode: ClipboardMode,
     #[serde(default)]
     pub content: Option<String>,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
-fn default_false() -> bool {
-    false
-}
-
-pub fn run_clipboard(args: &ClipboardArgs) -> anyhow::Result<String> {
+pub fn run_clipboard(args: &ClipboardArgs, confirm_destructive: bool) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("clipboard operations require --confirm-destructive");
+    }
     let mut cb = Clipboard::new()?;
     match args.mode {
         ClipboardMode::Read => Ok(cb.get_text()?),

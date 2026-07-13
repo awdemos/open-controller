@@ -7,17 +7,14 @@ use crate::linux::input::InputBackend;
 pub struct MultiSelectArgs {
     #[serde(default)]
     pub locs: Option<Vec<[i32; 2]>>,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
-fn default_false() -> bool {
-    false
-}
-
-pub fn run_multi_select(args: &MultiSelectArgs) -> anyhow::Result<String> {
-    if !args.confirm {
-        anyhow::bail!("multi_select requires confirm=true");
+pub fn run_multi_select(
+    args: &MultiSelectArgs,
+    confirm_destructive: bool,
+) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("multi_select requires --confirm-destructive");
     }
     let locs = args
         .locs

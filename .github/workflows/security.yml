@@ -1,0 +1,57 @@
+name: Security
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@56f84321dbaf38e54f3f581ffdf66fc6f04ff44d # stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Run cargo audit
+        run: cargo audit --manifest-path linux/open-controller-linux/Cargo.toml
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3f2175a5 # v4.1.0
+        with:
+          node-version: '20'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=low
+
+      - name: Type check TypeScript
+        run: npm run lint
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libxext-dev libwayland-dev pkg-config
+
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path linux/open-controller-linux/Cargo.toml -- --check
+
+      - name: Lint Rust
+        run: cargo clippy --manifest-path linux/open-controller-linux/Cargo.toml -- -D warnings
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path linux/open-controller-linux/Cargo.toml
+
+      - name: Build Rust release binary
+        run: cargo build --release --manifest-path linux/open-controller-linux/Cargo.toml

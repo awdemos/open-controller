@@ -1,13 +1,12 @@
 use open_controller_linux::tools::app::{AppArgs, run_app};
 use std::path::PathBuf;
 
-fn make_args(name: &str, launch: bool, focus: bool, close: bool, confirm: bool) -> AppArgs {
+fn make_args(name: &str, launch: bool, focus: bool, close: bool) -> AppArgs {
     AppArgs {
         name: name.to_string(),
         launch,
         focus,
         close,
-        confirm,
     }
 }
 
@@ -21,8 +20,8 @@ async fn launch_command_spawns_process() {
         std::fs::remove_file(&marker).unwrap();
     }
     let cmd = format!("touch {}", marker.display());
-    let args = make_args(&cmd, true, false, false, true);
-    let out = run_app(&args).await.unwrap();
+    let args = make_args(&cmd, true, false, false);
+    let out = run_app(&args, true).await.unwrap();
     assert!(out.contains("launched"));
     // Wait briefly for the touch to complete.
     for _ in 0..20 {
@@ -37,8 +36,8 @@ async fn launch_command_spawns_process() {
 
 #[tokio::test]
 async fn app_requires_confirm() {
-    let args = make_args("echo hello", true, false, false, false);
-    let err = run_app(&args).await.unwrap_err();
+    let args = make_args("echo hello", true, false, false);
+    let err = run_app(&args, false).await.unwrap_err();
     assert!(err.to_string().contains("confirm"));
 }
 
@@ -49,7 +48,7 @@ async fn focus_requires_display() {
     {
         return;
     }
-    let args = make_args("foo", false, true, false, true);
-    let err = run_app(&args).await.unwrap_err();
+    let args = make_args("foo", false, true, false);
+    let err = run_app(&args, true).await.unwrap_err();
     assert!(err.to_string().contains("display") || err.to_string().contains("window"));
 }

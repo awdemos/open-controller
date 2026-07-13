@@ -40,10 +40,10 @@ impl ControllerServer {
 
     #[tool(
         name = "clipboard",
-        description = "Read, write, or clear the system clipboard"
+        description = "Read, write, or clear the system clipboard (requires --confirm-destructive)"
     )]
     async fn clipboard(&self, Parameters(args): Parameters<ClipboardArgs>) -> String {
-        match run_clipboard(&args) {
+        match run_clipboard(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -51,18 +51,21 @@ impl ControllerServer {
 
     #[tool(
         name = "file_system",
-        description = "Read, write, copy, move, delete, list, search, or get info on files"
+        description = "Read, write, copy, move, delete, list, search, or get info on files within the configured base directory"
     )]
     async fn file_system(&self, Parameters(args): Parameters<FileSystemArgs>) -> String {
-        match run_file_system(&args, self.state.confirm_destructive) {
+        match run_file_system(&args, self.state.confirm_destructive, &self.state.base_dir) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
     }
 
-    #[tool(name = "notification", description = "Send a desktop notification")]
+    #[tool(
+        name = "notification",
+        description = "Send a desktop notification (requires --confirm-destructive)"
+    )]
     async fn notification(&self, Parameters(args): Parameters<NotificationArgs>) -> String {
-        match run_notification(&args) {
+        match run_notification(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -81,10 +84,10 @@ impl ControllerServer {
 
     #[tool(
         name = "scrape",
-        description = "Fetch a URL and optionally extract text via CSS selector"
+        description = "Fetch a public URL and optionally extract text via CSS selector"
     )]
     async fn scrape(&self, Parameters(args): Parameters<ScrapeArgs>) -> String {
-        match run_scrape(&args).await {
+        match run_scrape(&args, &self.state.scrape_allowlist).await {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -92,10 +95,10 @@ impl ControllerServer {
 
     #[tool(
         name = "screenshot",
-        description = "Capture a screenshot of the primary display"
+        description = "Capture a screenshot of the primary display (requires --confirm-destructive)"
     )]
     async fn screenshot(&self, Parameters(args): Parameters<ScreenshotArgs>) -> String {
-        match run_screenshot(&args) {
+        match run_screenshot(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -103,10 +106,10 @@ impl ControllerServer {
 
     #[tool(
         name = "app",
-        description = "Launch, focus, or close an application window"
+        description = "Launch, focus, or close an application window (requires --confirm-destructive)"
     )]
     async fn app(&self, Parameters(args): Parameters<AppArgs>) -> String {
-        match run_app(&args).await {
+        match run_app(&args, self.state.confirm_destructive).await {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -114,10 +117,10 @@ impl ControllerServer {
 
     #[tool(
         name = "click",
-        description = "Click a mouse button at screen coordinates"
+        description = "Click a mouse button at screen coordinates (requires --confirm-destructive)"
     )]
     async fn click(&self, Parameters(args): Parameters<ClickArgs>) -> String {
-        match run_click(&args) {
+        match run_click(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -125,10 +128,10 @@ impl ControllerServer {
 
     #[tool(
         name = "move",
-        description = "Move the mouse cursor to screen coordinates"
+        description = "Move the mouse cursor to screen coordinates (requires --confirm-destructive)"
     )]
     async fn r#move(&self, Parameters(args): Parameters<MoveArgs>) -> String {
-        match run_move(&args) {
+        match run_move(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -136,26 +139,32 @@ impl ControllerServer {
 
     #[tool(
         name = "scroll",
-        description = "Scroll the mouse wheel at screen coordinates"
+        description = "Scroll the mouse wheel at screen coordinates (requires --confirm-destructive)"
     )]
     async fn scroll(&self, Parameters(args): Parameters<ScrollArgs>) -> String {
-        match run_scroll(&args) {
+        match run_scroll(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
     }
 
-    #[tool(name = "type", description = "Type text as keyboard input")]
+    #[tool(
+        name = "type",
+        description = "Type text as keyboard input (requires --confirm-destructive)"
+    )]
     async fn r#type(&self, Parameters(args): Parameters<TypeArgs>) -> String {
-        match run_type(&args) {
+        match run_type(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
     }
 
-    #[tool(name = "shortcut", description = "Press a keyboard shortcut")]
+    #[tool(
+        name = "shortcut",
+        description = "Press a keyboard shortcut (requires --confirm-destructive)"
+    )]
     async fn shortcut(&self, Parameters(args): Parameters<ShortcutArgs>) -> String {
-        match run_shortcut(&args) {
+        match run_shortcut(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -179,10 +188,10 @@ impl ControllerServer {
 
     #[tool(
         name = "snapshot",
-        description = "Capture a screenshot and list visible windows"
+        description = "Capture a screenshot and list visible windows (requires --confirm-destructive)"
     )]
     async fn snapshot(&self, Parameters(args): Parameters<SnapshotArgs>) -> String {
-        match run_snapshot(&args) {
+        match run_snapshot(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -190,10 +199,10 @@ impl ControllerServer {
 
     #[tool(
         name = "multi_select",
-        description = "Click multiple screen coordinates"
+        description = "Click multiple screen coordinates (requires --confirm-destructive)"
     )]
     async fn multi_select(&self, Parameters(args): Parameters<MultiSelectArgs>) -> String {
-        match run_multi_select(&args) {
+        match run_multi_select(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }
@@ -201,10 +210,10 @@ impl ControllerServer {
 
     #[tool(
         name = "multi_edit",
-        description = "Click and type text at multiple coordinates"
+        description = "Click and type text at multiple coordinates (requires --confirm-destructive)"
     )]
     async fn multi_edit(&self, Parameters(args): Parameters<MultiEditArgs>) -> String {
-        match run_multi_edit(&args) {
+        match run_multi_edit(&args, self.state.confirm_destructive) {
             Ok(out) => out,
             Err(e) => format!("error: {}", e),
         }

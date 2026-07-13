@@ -7,22 +7,40 @@ Control your Windows or Linux PC directly from OpenCode.
 ## Features
 
 - **Desktop UI Automation** — click, type, scroll, drag, switch apps, resize windows
-- **File System** — read, write, copy, move, delete files and directories
-- **PowerShell / Shell** — execute PowerShell commands on Windows or shell commands on Linux
+- **File System** — read, write, copy, move, delete files and directories within a configured base directory
+- **PowerShell / Shell** — execute PowerShell commands on Windows or shell commands on Linux with allowlist controls
 - **Screenshots** — capture and analyze desktop screenshots
 - **Registry** — read, write, delete registry keys (Windows only; not available on Linux)
 - **Process** — list and kill running processes
-- **Clipboard** — get and set clipboard content
-- **Notifications** — send Windows toast notifications
-- **Web Scraping** — fetch and extract web page content
+- **Clipboard** — get and set clipboard content (requires confirmation)
+- **Notifications** — send desktop notifications (requires confirmation)
+- **Web Scraping** — fetch and extract web page content from public URLs
 - **Snapshot** — inspect UI elements on screen with coordinates
 - **Multi-actions** — batch select and edit multiple UI elements
+
+## Security model
+
+This plugin is intentionally powerful. To reduce the risk of prompt-injection or remote
+exploitation, several gates are enforced:
+
+- **Linux shell commands require an explicit allowlist.** No command is allowed by default.
+- **Linux file_system operations are restricted to a configurable base directory** and cannot
+  traverse outside it.
+- **The `scrape` tool refuses private, localhost, and cloud-metadata URLs** unless an explicit
+  allowlist overrides the default.
+- **Destructive UI, file, process, clipboard, and notification operations require the server
+  to be started with `--confirm-destructive`.** The previous caller-controlled `confirm=true`
+  JSON argument is no longer honored.
+- **Windows `pc-exec` restricts PowerShell to a read-only cmdlet allowlist.** Arbitrary
+  `Invoke-Expression`, `Start-Process`, encoded commands, and download/cradle patterns are blocked.
+- **The SSE transport binds to `127.0.0.1` by default** and can be protected with a bearer token
+  via `--sse-token`.
 
 ## Prerequisites
 
 - Node.js 18+
 - OpenCode
-- Python 3.11+
+- Python 3.11+ (Windows only)
 
 ## Installation
 
@@ -43,6 +61,20 @@ npm run build
 ```
 
 The Rust server is then registered automatically when the plugin loads on a Linux host.
+
+By default the Linux shell tool denies every command. Add an explicit allowlist to your
+OpenCode config (`opencode.jsonc`):
+
+```jsonc
+{
+  "plugin": ["open-controller"],
+  "open-controller": {
+    "linuxShellAllowlist": ["^echo ", "^ls ", "^cat "]
+  }
+}
+```
+
+> **Warning:** Do not use `.*` as an allowlist pattern — it permits arbitrary shell execution.
 
 ### Windows
 
@@ -65,8 +97,10 @@ npm install open-controller
 ### 2. Install the MCP server (Python package)
 
 ```bash
-pip install windows-mcp
+pip install windows-mcp==0.8.2
 ```
+
+The plugin verifies that the installed `windows-mcp` version matches `0.8.2`.
 
 ### 3. Add to OpenCode config
 
@@ -97,17 +131,17 @@ The plugin registers MCP tools via `windows-mcp` on Windows or `open-controller-
 |---|---|---|---|
 | App | ✅ | ⚠️ | Linux `switch`/`resize` require X11 |
 | Shortcut | ✅ | ⚠️ | Linux X11 via `enigo`; Wayland limited |
-| Snapshot | ✅ | ⚠️ | Linux returns X11 window tree + screenshot |
+| Snapshot | ✅ | ⚠️ | Linux X11 window tree + screenshot |
 | Screenshot | ✅ | ✅ | Linux X11 via `x11rb`; Wayland via portal |
 | Click / Type / Scroll / Move | ✅ | ⚠️ | Linux X11 via `enigo`; Wayland limited |
 | Wait / WaitFor | ✅ | ⚠️ | Linux WaitFor limited to process/window/clipboard |
-| FileSystem | ✅ | ✅ | 8 modes on both platforms |
-| PowerShell / Shell | ✅ | ✅ | Linux uses `/bin/sh` with allowlist |
-| Clipboard | ✅ | ✅ | Cross-platform via `arboard` |
+| FileSystem | ✅ | ✅ | Restricted to configured base directory on Linux |
+| PowerShell / Shell | ✅ | ✅ | Linux uses `/bin/sh` with explicit allowlist |
+| Clipboard | ✅ | ✅ | Requires `--confirm-destructive` on Linux |
 | Process | ✅ | ✅ | Linux kill restricted to current UID |
 | Registry | ✅ | ❌ | Windows only |
-| Notification | ✅ | ✅ | Linux via D-Bus |
-| Scrape | ✅ | ✅ | `reqwest` + `scraper` |
+| Notification | ✅ | ✅ | Requires `--confirm-destructive` on Linux |
+| Scrape | ✅ | ✅ | Blocks private/localhost/metadata URLs by default |
 | MultiSelect / MultiEdit | ✅ | ⚠️ | Linux coordinate-based on X11 |
 
 ### App Control
@@ -128,7 +162,7 @@ The plugin registers MCP tools via `windows-mcp` on Windows or `open-controller-
 - **FileSystem** — read, write, copy, move, delete, list, search, get info (8 modes)
 
 ### Shell
-- **PowerShell** — execute any PowerShell command with timeout
+- **PowerShell** — execute PowerShell commands with allowlist controls on Windows
 
 ### Clipboard
 - **Clipboard** — get or set clipboard text
@@ -155,8 +189,22 @@ Two extra tools are registered directly on the plugin:
 
 | Tool | Description |
 |------|-------------|
-| `pc-exec` | Execute any PowerShell command with output |
+| `pc-exec` | Execute a restricted PowerShell command with output |
 | `pc-screenshot` | Capture desktop as base64 PNG image |
+
+## Linux server CLI options
+
+```
+open-controller-linux serve
+  --transport <stdio|sse>     # default: stdio
+  --port <PORT>               # default: 8080 (SSE only)
+  --confirm-destructive       # required for destructive UI/file/process/clipboard/notification tools
+  --shell-allowlist <PATTERNS> # comma-separated regex patterns allowed for the shell tool
+  --base-dir <PATH>            # directory the file_system tool is restricted to (default: cwd)
+  --scrape-allowlist <PATTERNS> # comma-separated regex patterns allowed for the scrape tool
+  --sse-bind <IP>              # default: 127.0.0.1
+  --sse-token <TOKEN>          # bearer token required for SSE requests
+```
 
 ## Architecture
 
@@ -165,7 +213,7 @@ Two extra tools are registered directly on the plugin:
 ```
 OpenCode
   └── open-controller plugin
-       ├── pc-exec tool (PowerShell)
+       ├── pc-exec tool (restricted PowerShell)
        ├── pc-screenshot tool (base64 PNG)
        └── MCP Server: windows-mcp (Python)
             ├── App, Snapshot, Screenshot
@@ -182,8 +230,8 @@ OpenCode
 OpenCode
   └── open-controller plugin
        └── MCP Server: open-controller-linux (Rust)
-            ├── shell (bash with allowlist)
-            ├── file_system, process, clipboard
+            ├── shell (bash with explicit allowlist)
+            ├── file_system (base-dir restricted), process, clipboard
             ├── screenshot, snapshot
             ├── click, type, scroll, move, shortcut
             ├── app, wait, wait_for

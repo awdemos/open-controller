@@ -22,8 +22,6 @@ pub struct ProcessArgs {
     pub signal: Option<String>,
     #[serde(default = "default_false")]
     pub force: bool,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
 fn default_false() -> bool {
@@ -59,10 +57,8 @@ pub fn run_process(args: &ProcessArgs, confirm_destructive: bool) -> anyhow::Res
     match args.mode {
         ProcessMode::List => list_processes(&sys, args),
         ProcessMode::Kill => {
-            if !confirm_destructive && !args.confirm {
-                anyhow::bail!(
-                    "killing a process requires --confirm-destructive or per-call confirm=true"
-                );
+            if !confirm_destructive {
+                anyhow::bail!("killing a process requires --confirm-destructive");
             }
             kill_process(&mut sys, args)
         }

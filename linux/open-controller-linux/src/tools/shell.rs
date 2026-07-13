@@ -16,8 +16,25 @@ fn default_timeout() -> u32 {
     30
 }
 
-const FORBIDDEN_PATTERNS: &[&str] = &[
-    "sudo", "su -", "doas", "pkexec", "visudo", "chmod +s", "setuid",
+/// Commands that request elevated privileges or are used for privilege escalation.
+const FORBIDDEN_COMMANDS: &[&str] = &[
+    "sudo", "su", "doas", "pkexec", "visudo", "gksudo", "ksudo", "sudodo",
+];
+
+/// Dangerous multi-token patterns that are trivially bypassable with simple substring checks.
+const DANGEROUS_PATTERNS: &[&str] = &[
+    "base64 -d",
+    "base64 --decode",
+    "eval $(",
+    "eval `",
+    "bash -i",
+    "sh -i",
+    "nc -e",
+    "ncat -e",
+    "python -c",
+    "python3 -c",
+    "perl -e",
+    "ruby -e",
 ];
 
 pub fn check_shell_allowed(command: &str, allowlist: &[Regex]) -> bool {
@@ -25,8 +42,27 @@ pub fn check_shell_allowed(command: &str, allowlist: &[Regex]) -> bool {
 }
 
 pub fn has_elevated_privileges(command: &str) -> bool {
-    let lower = command.to_lowercase();
-    FORBIDDEN_PATTERNS.iter().any(|p| lower.contains(p))
+    let tokens = shlex::split(command).unwrap_or_default();
+    let lowered: Vec<String> = tokens.iter().map(|t| t.to_lowercase()).collect();
+
+    // Check for forbidden commands appearing as their own token.
+    for token in &lowered {
+        if FORBIDDEN_COMMANDS.contains(&token.as_str()) {
+            return true;
+        }
+    }
+
+    // Detect chmod setuid / sticky bit patterns.
+    if let Some(pos) = lowered.iter().position(|t| t == "chmod")
+        && let Some(mode) = lowered.get(pos + 1)
+        && ((mode.contains('+') && mode.contains('s')) || mode.starts_with('4'))
+    {
+        return true;
+    }
+
+    // Fallback to substring detection for patterns that span multiple tokens and pipes.
+    let lower_cmd = command.to_lowercase();
+    DANGEROUS_PATTERNS.iter().any(|p| lower_cmd.contains(p))
 }
 
 pub async fn run_shell(
@@ -72,4 +108,20 @@ pub async fn run_shell(
         );
     }
     Ok(result.trim().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tokenized_elevation_detection() {
+        assert!(has_elevated_privileges("sudo apt update"));
+        assert!(has_elevated_privileges("doas ls"));
+        assert!(has_elevated_privileges("pkexec sh"));
+        assert!(has_elevated_privileges("chmod +s /bin/bash"));
+        assert!(has_elevated_privileges("chmod 4755 /tmp/foo"));
+        assert!(!has_elevated_privileges("ls -la"));
+        assert!(!has_elevated_privileges("echo hello"));
+    }
 }

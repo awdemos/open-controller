@@ -2,7 +2,7 @@ use rmcp::schemars;
 use serde::Deserialize;
 use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use walkdir::WalkDir;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, schemars::JsonSchema)]
@@ -42,8 +42,6 @@ pub struct FileSystemArgs {
     pub encoding: String,
     #[serde(default = "default_false")]
     pub show_hidden: bool,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
 fn default_false() -> bool {
@@ -65,19 +63,64 @@ pub fn requires_confirmation(mode: &FileSystemMode) -> bool {
     DESTRUCTIVE_MODES.contains(mode)
 }
 
-fn resolve_path(input: &str) -> anyhow::Result<PathBuf> {
-    let path = Path::new(input);
-    Ok(path.canonicalize().unwrap_or_else(|_| path.to_path_buf()))
+/// Normalize a path by resolving `.` and `..` components without touching the filesystem.
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(p) => normalized.push(p.as_os_str()),
+            Component::RootDir => normalized.push(component.as_os_str()),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            Component::Normal(part) => normalized.push(part),
+        }
+    }
+    normalized
 }
 
-pub fn run_file_system(args: &FileSystemArgs, confirm_destructive: bool) -> anyhow::Result<String> {
-    if requires_confirmation(&args.mode) && !confirm_destructive && !args.confirm {
+/// Resolve `input` relative to `base_dir` and ensure the resulting path stays within `base_dir`.
+fn resolve_path(input: &str, base_dir: &Path) -> anyhow::Result<PathBuf> {
+    let path = Path::new(input);
+    let resolved = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        base_dir.join(path)
+    };
+
+    // Normalize logically so non-existent paths (common for writes) are still checked.
+    let normalized = normalize_path(&resolved);
+
+    // Use canonicalize when possible to resolve symlinks, falling back to the normalized path.
+    let canonical = normalized
+        .canonicalize()
+        .unwrap_or_else(|_| normalized.clone());
+
+    let canonical_base = base_dir
+        .canonicalize()
+        .unwrap_or_else(|_| base_dir.to_path_buf());
+
+    if !canonical.starts_with(&canonical_base) {
         anyhow::bail!(
-            "destructive file_system operation requires --confirm-destructive or per-call confirm=true"
+            "path escapes the configured base directory: {}",
+            canonical.display()
         );
     }
 
-    let path = resolve_path(&args.path)?;
+    Ok(canonical)
+}
+
+pub fn run_file_system(
+    args: &FileSystemArgs,
+    confirm_destructive: bool,
+    base_dir: &Path,
+) -> anyhow::Result<String> {
+    if requires_confirmation(&args.mode) && !confirm_destructive {
+        anyhow::bail!("destructive file_system operation requires --confirm-destructive");
+    }
+
+    let path = resolve_path(&args.path, base_dir)?;
 
     match args.mode {
         FileSystemMode::Read => read_file(&path, args.offset, args.limit, &args.encoding),
@@ -89,6 +132,7 @@ pub fn run_file_system(args: &FileSystemArgs, confirm_destructive: bool) -> anyh
                 args.destination
                     .as_deref()
                     .ok_or_else(|| anyhow::anyhow!("destination required for copy"))?,
+                base_dir,
             )?;
             if dest.exists() && !args.overwrite {
                 anyhow::bail!("destination already exists; set overwrite=true to replace");
@@ -104,6 +148,7 @@ pub fn run_file_system(args: &FileSystemArgs, confirm_destructive: bool) -> anyh
                 args.destination
                     .as_deref()
                     .ok_or_else(|| anyhow::anyhow!("destination required for move"))?,
+                base_dir,
             )?;
             if dest.exists() && !args.overwrite {
                 anyhow::bail!("destination already exists; set overwrite=true to replace");
@@ -158,6 +203,9 @@ fn read_file(
 }
 
 fn write_file(path: &Path, content: &str, append: bool) -> anyhow::Result<String> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
     let mut file = if append {
         fs::OpenOptions::new()
             .create(true)

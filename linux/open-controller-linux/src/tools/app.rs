@@ -12,17 +12,15 @@ pub struct AppArgs {
     pub focus: bool,
     #[serde(default = "default_false")]
     pub close: bool,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
 fn default_false() -> bool {
     false
 }
 
-pub async fn run_app(args: &AppArgs) -> anyhow::Result<String> {
-    if !args.confirm {
-        anyhow::bail!("app operation requires confirm=true");
+pub async fn run_app(args: &AppArgs, confirm_destructive: bool) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("app operation requires --confirm-destructive");
     }
     if args.launch {
         let mut cmd = tokio::process::Command::new("sh");

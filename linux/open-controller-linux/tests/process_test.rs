@@ -9,7 +9,6 @@ fn make_args(mode: ProcessMode) -> ProcessArgs {
         user: None,
         signal: None,
         force: false,
-        confirm: false,
     }
 }
 
@@ -53,7 +52,6 @@ fn kill_requires_confirm() {
 fn kill_self_rejected() {
     let mut args = make_args(ProcessMode::Kill);
     args.process_id = Some(get_current_pid().expect("current pid").as_u32());
-    args.confirm = true;
     let err = run_process(&args, true).unwrap_err();
     assert!(err.to_string().contains("cannot kill protected"));
 }
@@ -62,7 +60,6 @@ fn kill_self_rejected() {
 fn kill_pid_one_rejected() {
     let mut args = make_args(ProcessMode::Kill);
     args.process_id = Some(1);
-    args.confirm = true;
     let err = run_process(&args, true).unwrap_err();
     assert!(err.to_string().contains("cannot kill protected"));
 }

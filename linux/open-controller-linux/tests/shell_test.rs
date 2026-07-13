@@ -5,7 +5,13 @@ use regex::Regex;
 #[tokio::test]
 async fn echo_works_when_allowed() {
     let allowlist = vec![Regex::new(r"^echo ").unwrap()];
-    let state = AppState::new(false, allowlist);
+    let state = AppState::new(
+        false,
+        allowlist,
+        std::env::current_dir().unwrap(),
+        vec![],
+        None,
+    );
     let out = run_shell("echo hello", 5, &state).await.unwrap();
     assert_eq!(out, "hello");
 }
@@ -20,7 +26,13 @@ async fn blocked_without_allowlist() {
 #[tokio::test]
 async fn elevated_privilege_blocked() {
     let allowlist = vec![Regex::new(r".*").unwrap()];
-    let state = AppState::new(false, allowlist);
+    let state = AppState::new(
+        false,
+        allowlist,
+        std::env::current_dir().unwrap(),
+        vec![],
+        None,
+    );
     let err = run_shell("sudo ls", 5, &state).await.unwrap_err();
     assert!(err.to_string().contains("elevated privileges"));
 }
@@ -29,5 +41,21 @@ async fn elevated_privilege_blocked() {
 fn detects_elevated_patterns() {
     assert!(has_elevated_privileges("sudo apt update"));
     assert!(has_elevated_privileges("doas ls"));
+    assert!(has_elevated_privileges("chmod +s /bin/bash"));
+    assert!(has_elevated_privileges("chmod 4755 /tmp/foo"));
     assert!(!has_elevated_privileges("ls -la"));
+}
+
+#[tokio::test]
+async fn shell_allowlist_blocks_unmatched_command() {
+    let allowlist = vec![Regex::new(r"^echo ").unwrap()];
+    let state = AppState::new(
+        false,
+        allowlist,
+        std::env::current_dir().unwrap(),
+        vec![],
+        None,
+    );
+    let err = run_shell("id", 5, &state).await.unwrap_err();
+    assert!(err.to_string().contains("allowlist"));
 }

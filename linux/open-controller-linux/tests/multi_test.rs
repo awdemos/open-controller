@@ -10,9 +10,8 @@ fn skip_if_headless() -> bool {
 fn multi_select_requires_confirm() {
     let args = MultiSelectArgs {
         locs: Some(vec![[10, 10]]),
-        confirm: false,
     };
-    let err = run_multi_select(&args).unwrap_err();
+    let err = run_multi_select(&args, false).unwrap_err();
     assert!(err.to_string().contains("confirm"));
 }
 
@@ -23,9 +22,8 @@ fn multi_select_headless_returns_error() {
     }
     let args = MultiSelectArgs {
         locs: Some(vec![[10, 10]]),
-        confirm: true,
     };
-    let err = run_multi_select(&args).unwrap_err();
+    let err = run_multi_select(&args, true).unwrap_err();
     assert!(err.to_string().contains("no display"));
 }
 
@@ -37,9 +35,8 @@ fn multi_edit_requires_confirm() {
             y: 10,
             text: "hi".to_string(),
         }]),
-        confirm: false,
     };
-    let err = run_multi_edit(&args).unwrap_err();
+    let err = run_multi_edit(&args, false).unwrap_err();
     assert!(err.to_string().contains("confirm"));
 }
 
@@ -54,8 +51,7 @@ fn multi_edit_headless_returns_error() {
             y: 10,
             text: "hi".to_string(),
         }]),
-        confirm: true,
     };
-    let err = run_multi_edit(&args).unwrap_err();
+    let err = run_multi_edit(&args, true).unwrap_err();
     assert!(err.to_string().contains("no display"));
 }

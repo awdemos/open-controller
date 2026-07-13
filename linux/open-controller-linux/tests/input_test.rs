@@ -15,9 +15,8 @@ fn click_requires_confirm() {
         button: 0,
         x: 10,
         y: 10,
-        confirm: false,
     };
-    let err = run_click(&args).unwrap_err();
+    let err = run_click(&args, false).unwrap_err();
     assert!(err.to_string().contains("confirm"));
 }
 
@@ -30,9 +29,8 @@ fn input_headless_returns_error() {
         button: 0,
         x: 10,
         y: 10,
-        confirm: true,
     };
-    let err = run_click(&args).unwrap_err();
+    let err = run_click(&args, true).unwrap_err();
     assert!(err.to_string().contains("no display"));
 }
 
@@ -42,9 +40,8 @@ fn move_requires_confirm() {
         x: 10,
         y: 10,
         relative: false,
-        confirm: false,
     };
-    let err = run_move(&args).unwrap_err();
+    let err = run_move(&args, false).unwrap_err();
     assert!(err.to_string().contains("confirm"));
 }
 
@@ -55,9 +52,8 @@ fn scroll_requires_confirm() {
         x: 10,
         y: 10,
         amount: None,
-        confirm: false,
     };
-    let err = run_scroll(&args).unwrap_err();
+    let err = run_scroll(&args, false).unwrap_err();
     assert!(err.to_string().contains("confirm"));
 }
 
@@ -65,9 +61,8 @@ fn scroll_requires_confirm() {
 fn type_requires_confirm() {
     let args = TypeArgs {
         text: "hello".to_string(),
-        confirm: false,
     };
-    let err = run_type(&args).unwrap_err();
+    let err = run_type(&args, false).unwrap_err();
     assert!(err.to_string().contains("confirm"));
 }
 
@@ -75,8 +70,7 @@ fn type_requires_confirm() {
 fn shortcut_requires_confirm() {
     let args = ShortcutArgs {
         keys: "ctrl+c".to_string(),
-        confirm: false,
     };
-    let err = run_shortcut(&args).unwrap_err();
+    let err = run_shortcut(&args, false).unwrap_err();
     assert!(err.to_string().contains("confirm"));
 }

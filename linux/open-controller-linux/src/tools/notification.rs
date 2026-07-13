@@ -14,7 +14,13 @@ fn default_app_id() -> String {
     "open-controller-linux".to_string()
 }
 
-pub fn run_notification(args: &NotificationArgs) -> anyhow::Result<String> {
+pub fn run_notification(
+    args: &NotificationArgs,
+    confirm_destructive: bool,
+) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("notification spoofing requires --confirm-destructive");
+    }
     Notification::new()
         .summary(&args.title)
         .body(&args.message)

@@ -6,17 +6,11 @@ use crate::linux::input::InputBackend;
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct ShortcutArgs {
     pub keys: String,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
-fn default_false() -> bool {
-    false
-}
-
-pub fn run_shortcut(args: &ShortcutArgs) -> anyhow::Result<String> {
-    if !args.confirm {
-        anyhow::bail!("shortcut requires confirm=true");
+pub fn run_shortcut(args: &ShortcutArgs, confirm_destructive: bool) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("shortcut requires --confirm-destructive");
     }
     let mut backend = InputBackend::try_new()?;
     backend.shortcut(&args.keys)?;

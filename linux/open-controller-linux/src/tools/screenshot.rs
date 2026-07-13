@@ -10,17 +10,11 @@ pub struct ScreenshotArgs {
     pub display: Option<String>,
     #[serde(default)]
     pub region: Option<String>,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
-fn default_false() -> bool {
-    false
-}
-
-pub fn run_screenshot(args: &ScreenshotArgs) -> anyhow::Result<String> {
-    if !args.confirm {
-        anyhow::bail!("screenshot requires confirm=true");
+pub fn run_screenshot(_args: &ScreenshotArgs, confirm_destructive: bool) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("screenshot requires --confirm-destructive");
     }
     let img = screen::capture()?;
     let b64 = base64::prelude::BASE64_STANDARD.encode(&img.png_bytes);

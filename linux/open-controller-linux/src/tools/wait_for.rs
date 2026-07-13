@@ -79,12 +79,13 @@ fn window_exists(value: &str) -> anyhow::Result<bool> {
 }
 
 fn clipboard_contains(value: &str) -> anyhow::Result<bool> {
+    // WaitFor reading the clipboard is a passive read; it does not require a
+    // destructive confirmation gate, but we still gate direct clipboard reads.
     let args = ClipboardArgs {
         mode: ClipboardMode::Read,
         content: None,
-        confirm: false,
     };
-    match run_clipboard(&args) {
+    match run_clipboard(&args, false) {
         Ok(text) => Ok(text.contains(value)),
         Err(_) => Ok(false),
     }

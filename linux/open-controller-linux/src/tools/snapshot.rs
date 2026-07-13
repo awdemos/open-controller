@@ -9,17 +9,15 @@ use crate::linux::{screen, window};
 pub struct SnapshotArgs {
     #[serde(default = "default_false")]
     pub annotate: bool,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
 fn default_false() -> bool {
     false
 }
 
-pub fn run_snapshot(args: &SnapshotArgs) -> anyhow::Result<String> {
-    if !args.confirm {
-        anyhow::bail!("snapshot requires confirm=true");
+pub fn run_snapshot(args: &SnapshotArgs, confirm_destructive: bool) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("snapshot requires --confirm-destructive");
     }
     let screenshot = screen::capture()?;
     let windows = window::list_windows().unwrap_or_default();

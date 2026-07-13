@@ -10,22 +10,16 @@ pub struct ScrollArgs {
     pub y: i32,
     #[serde(default)]
     pub amount: Option<i32>,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
-fn default_false() -> bool {
-    false
-}
-
-pub fn run_scroll(args: &ScrollArgs) -> anyhow::Result<String> {
-    if !args.confirm {
-        anyhow::bail!("scroll requires confirm=true");
+pub fn run_scroll(args: &ScrollArgs, confirm_destructive: bool) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("scroll requires --confirm-destructive");
     }
     let mut backend = InputBackend::try_new()?;
     backend.scroll(args.direction, args.x, args.y, args.amount.unwrap_or(3))?;
     Ok(format!(
-        "scrolled direction {} at {},{}",
+        "scrolled direction {} at {}, {}",
         args.direction, args.x, args.y
     ))
 }

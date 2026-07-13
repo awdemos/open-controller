@@ -8,17 +8,11 @@ pub struct ClickArgs {
     pub button: i32,
     pub x: i32,
     pub y: i32,
-    #[serde(default = "default_false")]
-    pub confirm: bool,
 }
 
-fn default_false() -> bool {
-    false
-}
-
-pub fn run_click(args: &ClickArgs) -> anyhow::Result<String> {
-    if !args.confirm {
-        anyhow::bail!("click requires confirm=true");
+pub fn run_click(args: &ClickArgs, confirm_destructive: bool) -> anyhow::Result<String> {
+    if !confirm_destructive {
+        anyhow::bail!("click requires --confirm-destructive");
     }
     let mut backend = InputBackend::try_new()?;
     backend.click(args.button, args.x, args.y)?;
